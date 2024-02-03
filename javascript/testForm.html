@@ -1,0 +1,64 @@
+<html>
+
+<head>
+	<script src='scripts/calculator.js'></script>
+	<script>
+		function load() {
+			com1()
+			com2()
+		}
+
+		function com1() {
+			try {
+				s = ExpressionEstimator.calculate(el('t1').value)
+			}
+			catch (ex) {
+				s = ex
+			}
+			el('o1').innerHTML = s
+		}
+
+		function com2() {
+			try {
+				v = el('v2').value.trim();
+				if (v.length) {
+					v = v.split(/\s+/);
+				}
+				else {
+					v = []
+				}
+				// el('p').innerHTML=v.join(',')
+				e = new ExpressionEstimator();
+				e.compile(el('t2').value, v)
+				v = el('a2').value.trim().split(/\s+/).map(e => {
+					n = Number(e)
+					if (isNaN(n)) {
+						throw new Error('value ' + e + ' is not a number')
+					}
+					return n
+				});
+				//el('p').innerHTML=v.join(',')
+				s = e.calculate(v)
+			}
+			catch (ex) {
+				s = ex
+			}
+			el('o2').innerHTML = s
+		}
+
+		function el(i) {
+			return document.getElementById(i);
+		}
+	</script>
+</head>
+
+<body onload="load()">
+	<p id='p'></p>
+	expression<input type="text" id="t1" value="Sin(pI/4)" onkeyup="com1()" style="width:300px"> <span
+		id="o1"></span><br><br>
+	expression<input type="text" id="t2" value="x0+2*x1" onkeyup="com2()"> variables<input type="text" id="v2"
+		value="x0 x1" onkeyup="com2()">
+	values<input type="text" id="a2" value="1 2" onkeyup="com2()"> <span id="o2"></span><br>
+</body>
+
+</html>

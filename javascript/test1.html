@@ -1,0 +1,25 @@
+<html>
+
+<head>
+	<script src='scripts/calculator.js'></script>
+	<script>
+		function load() {
+			s = '';
+			try {
+				s += ExpressionEstimator.calculate('sin(pi/4)') + '<br>'
+				s += ExpressionEstimator.calculate('pow( sin(pi/10)*4+1 , 2)')
+			}
+			catch (ex) {
+				s += ex
+			}
+
+			document.getElementById('p').innerHTML = s
+		}
+	</script>
+</head>
+
+<body onload="load()">
+	<p id='p'></p>
+</body>
+
+</html>

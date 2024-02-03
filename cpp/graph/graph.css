@@ -1,0 +1,31 @@
+label,entry,frame label{
+	color: #000000;
+}
+
+.cerror{
+	color:rgb(255,0,0);
+}
+
+.c0{
+	color:black;
+}
+
+.c1{
+	color:indianred;
+}
+
+.c2{
+	color:green;
+}
+
+.c3{
+	color:blue;
+}
+
+.c4{
+	color:#808000;
+}
+
+.c5{
+	color:orange;
+}

@@ -1,0 +1,57 @@
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<style>
+	</style>
+	<script src='scripts/calculator.js'></script>
+	<script src='testcase/enum.js'></script>
+	<script src='testcase/action.js'></script>
+	<script src='testcase/data.js'></script>
+	<script src='testcase/result.js'></script>
+	<script src='testcase/case.js'></script>
+	<script src='testcase/testcases.js'></script>
+	<script>
+		function load() {
+			er = ''
+			t = new Case();
+			i = 0;
+			s = ["", "", ""]
+			line = [0, 0, 0]
+			r = [0, 0]
+			gdata.split(/\r?\n/).forEach((e, _line) => {
+				if (!e.length) {
+					return;
+				}
+				s[i] = e;
+				line[i] = _line + 1;
+				if (i == 2) {
+					t.set(s, line);
+					[b, rs] = t.test()
+					r[+b]++;
+					er += rs
+					i = 0;
+				}
+				else {
+					i++;
+				}
+			});
+
+			j = r[0] + r[1];
+			k = Math.floor(Math.log10(j) + 1);
+			s = ''
+			for (i = 1; i >= 0; i--) {
+				s += (i ? "ok   " : "error").padStart(5) + ' ' + (r[i] + "").padStart(k) + '/' + j + '=' + (r[i] * 100. / j).toFixed(2) + '%<br>'
+			}
+
+			document.getElementById('p').innerHTML = er + s;
+		}
+	</script>
+</head>
+
+<body onload=load()>
+	<p id="p" style="white-space: pre;"></p>
+</body>
+
+</html>
