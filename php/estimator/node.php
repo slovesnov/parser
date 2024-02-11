@@ -141,6 +141,9 @@ class Node
 			case OPERATOR_ENUM::ABS:
 				return abs($l);
 
+			case OPERATOR_ENUM::SIGN:
+				return $l <=> 0;
+
 			case OPERATOR_ENUM::EXP:
 				return exp($l);
 

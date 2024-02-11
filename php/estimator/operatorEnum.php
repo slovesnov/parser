@@ -54,11 +54,12 @@ class OPERATOR_ENUM
 	const FLOOR = 41;
 	const ROUND = 42;
 	const ABS = 43;
-	const EXP = 44;
-	const LOG = 45;
-	const SQRT = 46;
-	const X = 47;
-	const NUMBER = 48;
-	const UNARY_MINUS = 49;
-	const END = 50;
+	const SIGN = 44;
+	const EXP = 45;
+	const LOG = 46;
+	const SQRT = 47;
+	const X = 48;
+	const NUMBER = 49;
+	const UNARY_MINUS = 50;
+	const END = 51;
 }

@@ -1,7 +1,13 @@
 <?php
 include('estimator/expressionEstimator.php');
 
-$v = ExpressionEstimator::calculate("sin(pi/4)");
-echo "$v<br>";
-$v = ExpressionEstimator::calculate("pow( sin(pi/10)*4+1 , 2)");
-echo "$v<br>";
+$a = [
+	'sin(pi/4)'
+		, 'pow( sin(pi/10)*4+1 , 2)'
+		, '(sqrt(28/27)+1)^(1/3)-(sqrt(28/27)-1)^(1/3)'
+		, 'sqrt(28/3)*sin(asin( sqrt(243/343)) /3 )'
+];
+
+foreach ($a as $s) {
+	echo ExpressionEstimator::calculate($s) . "<br>";
+}

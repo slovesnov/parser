@@ -123,7 +123,7 @@ class ExpressionEstimator {
 			throw new Error('Two operators in a row');
 		}
 
-		e = ExpressionEstimator.replaceRarelyFunction(e).replace('^', '**');
+		e = ExpressionEstimator.replaceRarelyFunction(e).replaceAll('^', '**');
 		ExpressionEstimator.rf.forEach(s => {
 			k = s.indexOf('(');
 			if (k == -1) {//if no arguments toUpperCase pi->PI
@@ -233,7 +233,6 @@ class ExpressionEstimator {
 			e = e.replace(/\bX(\d+)\b/g, 'x\$1')//case sensitive
 		}
 
-
 		this.f = new Function(v, 'return ' + e)
 		this.arguments = v.length //number of arguments
 	}
@@ -268,6 +267,7 @@ class ExpressionEstimator {
 			ExpressionEstimator.replace[i + 2] = b.map(e => e + (i ? 'h' : '') + '()')
 		}
 		ExpressionEstimator.rf = ExpressionEstimator.replace.flat();
+		ExpressionEstimator.rf.push('sign()');
 	}
 
 	/*replaceRarelyFunction("2*cot(3)")=2*(1/tan(3))

@@ -51,7 +51,7 @@ class ExpressionEstimator
 		"TAN", "COT", "SEC", "CSC", "ASIN", "ACOS", "ATAN", "ACOT", "ASEC",
 		"ACSC", "SINH", "COSH", "TANH", "COTH", "SECH", "CSCH", "ASINH",
 		"ACOSH", "ATANH", "ACOTH", "ASECH", "ACSCH", "RANDOM", "CEIL", "FLOOR",
-		"ROUND", "ABS", "EXP", "LOG", "SQRT"
+		"ROUND", "ABS", "SIGN", "EXP", "LOG", "SQRT"
 	];
 
 	private const T = "+-*/()[]{},^";

@@ -1,1 +1,4 @@
 /Release/
+/.gitignore
+/.cproject
+/.project

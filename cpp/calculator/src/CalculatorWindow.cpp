@@ -7,6 +7,7 @@
  ******************************************************/
 
 #include <cassert>
+#include <cmath>
 #include "CalculatorWindow.h"
 #include "ExpressionEstimator.h"
 #include "aslov.h"
@@ -18,7 +19,6 @@ enum {
 const char HOMEPAGE[] = "http://slovesnov.users.sf.net/?calculator"; //use short name because string is used in about dialog
 const char CERROR[] = "cerror";
 const char MAIL[] = "slovesnov@yandex.ru";
-const double CALCULATOR_VERSION = 1.25; //format("%.2lf",)
 const std::string LNG[] = { "en", "ru" };
 const std::string LANGUAGE[] = { "english", "russian" };
 const std::string CONFIG_TAGS[] = { "version", "language" };
@@ -114,9 +114,11 @@ void CalculatorWindow::inputChanged() {
 			} else if (s1[i - 2] == '9') {
 				for (p = s1.c_str() + i - 2; *p == '9'; p--)
 					;
+				printl(*p=='.')
 				if (*p == '.') {
 					//originally was pow(sqrt(12), 2)=11.999999999999998 now make s=12
-					s = std::to_string(int(v) + 1);
+					//round works correct with negative numbers
+					s = std::to_string(int(std::round(v)));
 				} else {
 					//pow(sqrt(19.99), 2)=19.989999999999998
 					p++;
@@ -431,7 +433,7 @@ void CalculatorWindow::addItemToTable(GtkWidget *grid, GtkWidget *w, int column,
 }
 
 CalculatorWindow::~CalculatorWindow() {
-	WRITE_CONFIG(CONFIG_TAGS, CALCULATOR_VERSION, m_language);
+	WRITE_CONFIG(CONFIG_TAGS, ExpressionEstimator::version, m_language);
 }
 
 void CalculatorWindow::updateLanguage() {
@@ -494,7 +496,7 @@ void CalculatorWindow::aboutDialog() {
 		if (id == PROGRAM_VERSION) {
 			s = format(getLanguageString(id),
 					getLanguageString(SCIENTIFIC_CALCULATOR),
-					CALCULATOR_VERSION);
+					ExpressionEstimator::version);
 		} else if (id == CLEAR) {
 			s = getBuildVersionString(true);
 		} else if (id == RECOUNT) {
