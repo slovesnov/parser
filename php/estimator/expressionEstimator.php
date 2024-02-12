@@ -177,7 +177,21 @@ class ExpressionEstimator
 
 	private function parse1()
 	{
-		$node = $this->parse2();
+		if ($this->m_operator == OPERATOR_ENUM::MINUS) {
+			$this->getToken();
+			$node = new Node($this, OPERATOR_ENUM::UNARY_MINUS, $this->parse2());
+		} else {
+			if ($this->m_operator == OPERATOR_ENUM::PLUS) {
+				$this->getToken();
+			}
+			$node = $this->parse2();
+		}
+		return $node;
+	}
+
+	private function parse2()
+	{
+		$node = $this->parse3();
 		while (
 			$this->m_operator == OPERATOR_ENUM::MULTIPLY
 			|| $this->m_operator == OPERATOR_ENUM::DIVIDE
@@ -191,21 +205,7 @@ class ExpressionEstimator
 			) {
 				throw new Error("two operators in a row");
 			}
-			$node->m_right = $this->parse2();
-		}
-		return $node;
-	}
-
-	private function parse2()
-	{
-		if ($this->m_operator == OPERATOR_ENUM::MINUS) {
-			$this->getToken();
-			$node = new Node($this, OPERATOR_ENUM::UNARY_MINUS, $this->parse3());
-		} else {
-			if ($this->m_operator == OPERATOR_ENUM::PLUS) {
-				$this->getToken();
-			}
-			$node = $this->parse3();
+			$node->m_right = $this->parse3();
 		}
 		return $node;
 	}
