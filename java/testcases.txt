@@ -150,6 +150,18 @@ static_compile
 static_compile
 0.5
 
+"sign(.5)"
+static_compile
+1
+
+"sign(0)"
+static_compile
+0
+
+"sign(-.5)"
+static_compile
+-1
+
 "sin(.5)"
 static_compile
 0.479425538604203
@@ -393,6 +405,14 @@ static_compile
 "3**2"
 static_compile
 9
+
+"2**3+3**2"
+static_compile
+17
+
+"2^3+3^2"
+static_compile
+17
 
 "2 + 3 * * 2 + 8"
 static_compile

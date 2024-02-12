@@ -1,313 +1,594 @@
 /******************************************************
 Copyright (c/c++) 2013-doomsday by Alexey Slovesnov
-homepage http://slovesnov.users.sourceforge.net/
+homepage http://slovesnov.users.sourceforge.net?parser
 email slovesnov@yandex.ru
 All rights reserved.
 ******************************************************/
 
+// "use strict";
 class ExpressionEstimator {
+	/* 	m_expression;
+		m_tokenValue;
+		m_operator;
+		m_position;
+		m_argument;
+		m_arguments;
+		m_root;
+	 */
+	#isLetter() {
+		return /[a-z]/i.test(this.m_expression[this.m_position]);
+	}
+
+	#isDigit() {
+		return /\d/i.test(this.m_expression[this.m_position]);
+	}
+
+	#isPoint() {
+		return this.m_expression[this.m_position] == '.';
+	}
+
+	#isDigitOrPoint() {
+		return this.#isDigit() || this.#isPoint();
+	}
+
+	#isFunctionSymbol() {
+		return /\w/.test(this.m_expression[this.m_position]);
+	}
+
+	static CONSTANT_NAME = [
+		"PI", "E", "SQRT2", "SQRT1_2", "LN2",
+		"LN10", "LOG2E", "LOG10E"
+	];
+	static CONSTANT_VALUE = [
+		Math.PI, Math.E, Math.SQRT2, Math.SQRT1_2, Math.LN2, Math.LN10,
+		Math.LOG2E, Math.LOG10E
+	];
+
+	static FUNCTION = [
+		"POW", "ATAN2", "MIN", "MAX", "SIN", "COS",
+		"TAN", "COT", "SEC", "CSC", "ASIN", "ACOS", "ATAN", "ACOT", "ASEC",
+		"ACSC", "SINH", "COSH", "TANH", "COTH", "SECH", "CSCH", "ASINH",
+		"ACOSH", "ATANH", "ACOTH", "ASECH", "ACSCH", "RANDOM", "CEIL", "FLOOR",
+		"ROUND", "ABS", "SIGN", "EXP", "LOG", "SQRT"
+	];
+
+	static T = "+-*/()[]{},^";
+	static R = '#';
+
+	#getToken() {
+		let i, j, c, d, n, p, r, token, er
+		if (this.m_position == this.m_expression.length) {
+			this.m_operator = OPERATOR_ENUM.END;
+		} else if ((p = ExpressionEstimator.T.indexOf(this.m_expression[this.m_position])) != -1) {
+			this.m_position++;
+			this.m_operator = p;
+		} else if (this.#isLetter()) {
+			for (
+				i = this.m_position++;
+				this.m_position < this.m_expression.length && this.#isFunctionSymbol();
+				this.m_position++
+			);
+			token = this.m_expression.substring(i, this.m_position);
+
+			if (token[0] == 'X' && token.length > 1 && /\d/.test(token[1])) {
+				j = parseInt(token.substring(1));
+				if (this.m_arguments < j + 1) {
+					this.m_arguments = j + 1;
+				}
+				this.m_operator = OPERATOR_ENUM.X;
+				this.m_tokenValue = j;
+			} else {
+				i = ExpressionEstimator.FUNCTION.indexOf(token);
+				if (i == -1) {
+					i = ExpressionEstimator.CONSTANT_NAME.indexOf(token);
+					if (i == -1) {
+						throw new Error(`unknown keyword ${token}`);
+					}
+					this.m_tokenValue = ExpressionEstimator.CONSTANT_VALUE[i];
+					this.m_operator = OPERATOR_ENUM.NUMBER;
+				} else {
+					this.m_operator = i + OPERATOR_ENUM.POW;
+				}
+			}
+		} else if (this.#isDigitOrPoint()) {
+			this.m_operator = OPERATOR_ENUM.NUMBER;
+			p = this.m_expression.substring(this.m_position);
+			//binary, octal, hex numbers
+			if (
+				p[0] == '0' && this.m_position + 1 < this.m_expression.length
+				&& (n = "BOX".indexOf(p[1])) != -1
+			) {
+				r = [2, 8, 16][n];
+				er = false;
+				token = ['', ''];
+				i = 0;
+				for (
+					this.m_position += 2;
+					this.m_position < this.m_expression.length && (this.#isFunctionSymbol() || this.#isPoint());
+					this.m_position++
+				) {
+
+					if (this.#isPoint()) {
+						if (++i > 1) {
+							er = true;
+							break;
+						}
+					} else {
+						c = this.m_expression[this.m_position];
+						//intval("1ff",8)=1
+						if (r == 16 && !/[\dA-F]/.test(c) || r != 16 && c.charCodeAt(0) - '0'.charCodeAt(0) >= r) {
+							er = true;
+							break;
+						}
+						token[i] += c;
+					}
+				}
+				if (er || (token[0] == '' && token[1] == '')) {
+					throw new Error("invalid " + ["binary", "octal", "hex"][n] + " constant");
+				}
+				this.m_tokenValue = 0;
+				for (i = 0; i < 2; i++) {
+					if (token[i] != '') {
+						d = i ? r ** token[1].length : 1;
+						this.m_tokenValue += parseInt(token[i], r) / d;
+					}
+				}
+			} else {
+				c = 0;
+				for (i = this.m_position++; this.m_position < this.m_expression.length && (this.#isDigitOrPoint() || this.m_expression[this.m_position] == 'E'
+					|| this.m_expression[this.m_position - 1] == 'E' && in_array(this.m_expression[this.m_position], ["+", "-"])); this.m_position++) {
+					if (this.#isPoint()) {
+						if (++c > 1) {
+							break;
+						}
+					}
+				}
+				if (c > 1) {
+					throw new Error("invalid number");
+				}
+				this.m_tokenValue = parseFloat(this.m_expression.substring(i, this.m_position));
+			}
+		} else {
+			throw new Error("unknown symbol ".this.m_expression[this.m_position]);
+		}
+	}
+
+	#parse() {
+		let node = this.#parse1();
+		while (
+			this.m_operator == OPERATOR_ENUM.PLUS
+			|| this.m_operator == OPERATOR_ENUM.MINUS
+		) {
+			node = new Node(this, this.m_operator, node);
+			this.#getToken();
+			if (
+				this.m_operator == OPERATOR_ENUM.PLUS
+				|| this.m_operator == OPERATOR_ENUM.MINUS
+			) {
+				throw new Error("two operators in a row");
+			}
+			node.m_right = this.#parse1();
+		}
+		return node;
+	}
+
+	#parse1() {
+		let node = this.#parse2();
+		while (
+			this.m_operator == OPERATOR_ENUM.MULTIPLY
+			|| this.m_operator == OPERATOR_ENUM.DIVIDE
+			|| this.m_operator == OPERATOR_ENUM.POW
+		) {
+			node = new Node(this, this.m_operator, node);
+			this.#getToken();
+			if (
+				this.m_operator == OPERATOR_ENUM.PLUS
+				|| this.m_operator == OPERATOR_ENUM.MINUS
+			) {
+				throw new Error("two operators in a row");
+			}
+			node.m_right = this.#parse2();
+		}
+		return node;
+	}
+
+	#parse2() {
+		let node
+		if (this.m_operator == OPERATOR_ENUM.MINUS) {
+			this.#getToken();
+			node = new Node(this, OPERATOR_ENUM.UNARY_MINUS, this.#parse3());
+		} else {
+			if (this.m_operator == OPERATOR_ENUM.PLUS) {
+				this.#getToken();
+			}
+			node = this.#parse3();
+		}
+		return node;
+	}
+
+	#parse3() {
+		let args, node;
+		if (this.m_operator >= OPERATOR_ENUM.POW && this.m_operator <= OPERATOR_ENUM.SQRT) {
+			if (this.m_operator <= OPERATOR_ENUM.MAX) {
+				args = 2;
+			} else {
+				args = this.m_operator == OPERATOR_ENUM.RANDOM ? 0 : 1;
+			}
+
+			node = new Node(this, this.m_operator);
+			this.#getToken();
+			open = this.m_operator;
+			if (
+				this.m_operator != OPERATOR_ENUM.LEFT_BRACKET
+				&& this.m_operator != OPERATOR_ENUM.LEFT_SQUARE_BRACKET
+				&& this.m_operator != OPERATOR_ENUM.LEFT_CURLY_BRACKET
+			) {
+				throw new Error("open bracket expected");
+			}
+			this.#getToken();
+
+			if (args > 0) {
+				node.m_left = this.#parse();
+
+				if (args == 2) {
+					if (this.m_operator != OPERATOR_ENUM.COMMA) {
+						throw new Error("comma expected");
+					}
+					this.#getToken();
+					node.m_right = this.#parse();
+				}
+			}
+			this.#checkBracketBalance(open);
+		} else {
+			switch (this.m_operator) {
+
+				case OPERATOR_ENUM.X:
+				case OPERATOR_ENUM.NUMBER:
+					node = new Node(this, this.m_operator, this.m_tokenValue);
+					break;
+
+				case OPERATOR_ENUM.LEFT_BRACKET:
+				case OPERATOR_ENUM.LEFT_SQUARE_BRACKET:
+				case OPERATOR_ENUM.LEFT_CURLY_BRACKET:
+					open = this.m_operator;
+					this.#getToken();
+					node = this.#parse();
+					this.#checkBracketBalance(open);
+					break;
+
+				default:
+					throw new Error("unexpected operator");
+			}
+		}
+		this.#getToken();
+		return node;
+	}
+
+	static calculate(e) {
+		return new ExpressionEstimator(e).calculate();
+	}
+
+	compile(expression, ...variables) {
+		variables = Array.isArray(variables[0]) ? variables[0] : variables;
+		let v = variables, t, m;
+		let s = expression.replace(/\s+/g, "").replace(/\*{2}/g, "^");
+		if (s.includes(ExpressionEstimator.R)) {
+			throw new Error(ExpressionEstimator.R + " found in string");
+		}
+		if (v.length) {
+			//make copy
+			v.slice().sort().forEach((e, i, a) => {
+				t = e.toUpperCase();
+				if (ExpressionEstimator.CONSTANT_NAME.includes(t) || ExpressionEstimator.FUNCTION.includes(t)) {
+					throw new Error(
+						"reserved word \"t\" is used as variable"
+					);
+				}
+				//also check empty
+				if (!/^_*[A-Za-z]\w*/.test(e)) {
+					throw new Error(`invalid variable name "${e}"`);
+				}
+				if (i > 0 && e == a[i - 1]) {
+					throw new Error(`repeated variable "${e}" in list`);
+				}
+			});
+
+			variables.forEach((e, i) => s = s.replace(new RegExp("\\b" + e + "\\b", 'g'), ExpressionEstimator.R + i))
+
+			if ((m = /\b[xX]\d*\b/.test(s))) {
+				throw new Error(`unknown variable \"${m[0]}\"`);
+			}
+
+			s = s.replaceAll(ExpressionEstimator.R, 'X');
+		}
+		this.m_position = 0;
+		this.m_arguments = v.length;
+		this.m_expression = s.toUpperCase();
+		this.m_root = null;
+		this.m_argument = null;
+
+		t = variables.find(e => typeof e != 'string')
+		if (t !== undefined) {
+			throw new Error(`variable ${t} is not a string`);
+		}
+
+		this.#getToken();
+		if (this.m_operator == OPERATOR_ENUM.END) {
+			throw new Error("unexpected end of expression");
+		}
+		this.m_root = this.#parse();
+		if (this.m_operator != OPERATOR_ENUM.END) {
+			throw new Error("end of expression expected");
+		}
+	}
+
+	calculate(...a) {
+		let v = Array.isArray(a[0]) ? a[0] : a;
+		this.m_argument = v;
+		if (typeof this.m_root == 'undefined') {
+			throw new Error('Expression is not compiled or compiled with error');
+		}
+		if (v.length != this.m_arguments) {
+			throw new Error('Invalid number of arguments');
+		}
+		return this.m_root.calculate(...v);
+	}
+
+	#checkBracketBalance(open) {
+		if ((open == OPERATOR_ENUM.LEFT_BRACKET
+			&& this.m_operator != OPERATOR_ENUM.RIGHT_BRACKET)
+			|| (open == OPERATOR_ENUM.LEFT_SQUARE_BRACKET
+				&& this.m_operator != OPERATOR_ENUM.RIGHT_SQUARE_BRACKET)
+			|| (open == OPERATOR_ENUM.LEFT_CURLY_BRACKET
+				&& this.m_operator != OPERATOR_ENUM.RIGHT_CURLY_BRACKET)
+		) {
+			throw new Error(
+				"close bracket expected or another type of close bracket"
+			);
+		}
+	}
+
 	constructor(...a) {
 		if (a.length) {//check for non empty constructor
 			this.compile(...a)
 		}
 	}
 
-	//ExpressionEstimator.calculate('sin(pi/4)')
-	static calculate(e) {
-		return new ExpressionEstimator(e).calculate();
+	getArgument(n) {
+		return this.m_argument[n];
 	}
 
-	/*
-	es=new ExpressionEstimator();
-	es.compile('x0+2*sin(pi*x1)', 'x0', 'x1');//es.compile('x0+2*sin(pi*x1)', ['x0', 'x1']);
-	s+='<br>'+es.calculate(1,1/4)+'<br>'+es.calculate([2,1/6]);
-	es.compile('x0+2*x1', 'x0', 'x1');
-	s+='<br>'+es.calculate(1,2);
-	*/
-	calculate(...a) {
-		let v = Array.isArray(a[0]) ? a[0] : a;
-		if (typeof this.f == 'undefined') {
-			throw new Error('Expression is not compiled or compiled with error');
+}
+
+/*
+notes for OPERATOR_ENUM 
+PLUS should be first in enum. Common operators should go in a row. Order is important. 
+POW, ATAN2, MIN, MAX should go in a row see parse3 function
+PLUS-POW should go in row getToken()
+POW-SQRT should go in row from parse3()
+finally PLUS should be first, PLUS-SQRT should goes in row
+*/
+class OPERATOR_ENUM {
+	static get PLUS() { return 0; }
+	static get MINUS() { return 1; }
+	static get MULTIPLY() { return 2; }
+	static get DIVIDE() { return 3; }
+	static get LEFT_BRACKET() { return 4; }
+	static get RIGHT_BRACKET() { return 5; }
+	static get LEFT_SQUARE_BRACKET() { return 6; }
+	static get RIGHT_SQUARE_BRACKET() { return 7; }
+	static get LEFT_CURLY_BRACKET() { return 8; }
+	static get RIGHT_CURLY_BRACKET() { return 9; }
+	static get COMMA() { return 10; }
+	static get POW() { return 11; }
+	static get ATAN2() { return 12; }
+	static get MIN() { return 13; }
+	static get MAX() { return 14; }
+	static get SIN() { return 15; }
+	static get COS() { return 16; }
+	static get TAN() { return 17; }
+	static get COT() { return 18; }
+	static get SEC() { return 19; }
+	static get CSC() { return 20; }
+	static get ASIN() { return 21; }
+	static get ACOS() { return 22; }
+	static get ATAN() { return 23; }
+	static get ACOT() { return 24; }
+	static get ASEC() { return 25; }
+	static get ACSC() { return 26; }
+	static get SINH() { return 27; }
+	static get COSH() { return 28; }
+	static get TANH() { return 29; }
+	static get COTH() { return 30; }
+	static get SECH() { return 31; }
+	static get CSCH() { return 32; }
+	static get ASINH() { return 33; }
+	static get ACOSH() { return 34; }
+	static get ATANH() { return 35; }
+	static get ACOTH() { return 36; }
+	static get ASECH() { return 37; }
+	static get ACSCH() { return 38; }
+	static get RANDOM() { return 39; }
+	static get CEIL() { return 40; }
+	static get FLOOR() { return 41; }
+	static get ROUND() { return 42; }
+	static get ABS() { return 43; }
+	static get SIGN() { return 44; }
+	static get EXP() { return 45; }
+	static get LOG() { return 46; }
+	static get SQRT() { return 47; }
+	static get X() { return 48; }
+	static get NUMBER() { return 49; }
+	static get UNARY_MINUS() { return 50; }
+	static get END() { return 51; }
+}
+
+class Node {
+	//m_estimator;
+	//m_operator;
+	//m_value;
+	//m_left, m_right;
+
+	constructor(estimator, _operator, p = null) {
+		if (typeof p == 'number') {
+			this.init(estimator, _operator, p, null);
+		} else {
+			this.init(estimator, _operator, 0, p);
 		}
-		if (v.length != this.arguments) {
-			throw new Error('Invalid number of arguments');
-		}
-		return this.f(...v);
 	}
 
-	compile(expression, ...a) {
-		//todo compile('1,2') = error
-		//todo compile('sin(1,2)') = error
-
-		//remove previously compiled
-		delete this.f
-		delete this.arguments
-
-		let i, j, k, s, e, f, t, v = Array.isArray(a[0]) ? a[0] : a
-		expression = expression.replace(/\s+/g, "")
-
-		e = expression;
-		if (e.length == 0) {
-			throw new Error('Empty expression');
-		}
-		if (!/^[\x00-\x7F]+$/.test(e)) {//check non ascii symbols, for example russian chars
-			throw new Error('Invalid character found');
-		}
-
-		//slice to leave v array
-		t = v.slice().sort()
-		t.forEach((e, i) => {
-			if (typeof e != 'string') {
-				throw new Error(`variable "${e}" is not a string`);
-			}
-			f = e.toLowerCase();
-			ExpressionEstimator.rf.forEach(s => {
-				k = s.indexOf('(');
-				if (k != -1) {
-					s = s.substring(0, k);
-				}
-				if (s == f) {
-					throw new Error("reserved word \"" + f + "\" is used as variable");
-				}
-			});
-			//also check empty
-			if (!e.match(/^_*[A-Za-z]\w*$/)) {
-				throw new Error("invalid variable name \"" + e + "\"");
-			}
-			if (i > 0 && e == t[i - 1]) {
-				throw new Error("repeated variable \"" + e + "\" in list");
-			}
-		});
-
-		//check unbalanced parentheses
-		t = ['(', ')', '[', ']', '{', '}']
-		for (s = 0; s < t.length - 1; s += 2) {
-			for (i = 0; i < e.length; i++) {
-				if (e.charAt(i) == t[s]) {
-					for (k = 0, j = i + 1; j < e.length; j++) {
-						if (e.charAt(j) == t[s]) {
-							k++;
-						}
-						else if (e.charAt(j) == t[s + 1]) {
-							if (k == 0) {
-								f = e.substring(i + 1, j);
-								if ((v === undefined || !v.includes(f)) && !e.substring(0, i).toLowerCase().endsWith('random')) {
-									this.compile(f, v)
-								}
-								break;
-							}
-							k--;
-						}
-					}
-					if (j == e.length) {
-						throw new Error('Unbalanced parentheses')
-					}
-				}
-			}
-		}
-
-		//should replace before search matches
-		f = ["\\[|\\{", "\\]|\\}"];
-		t = ["(", ")"];
-		for (i = 0; i < f.length; i++) {
-			e = e.replace(new RegExp(f[i], 'gi'), t[i])
-		}
-
-		//javascript allows "random(bla,bla,bla)" but it's error test it
-		if (/random\((?!\))/i.test(e)) {
-			throw new Error('Arguments of random function is not possible');
-		}
-
-		//javascript allows "2/+2" but it's error test it, ** is ok
-		if (/[-+*/][-+/]|[-+/][-+*/]/.test(e)) {
-			throw new Error('Two operators in a row');
-		}
-
-		e = ExpressionEstimator.replaceRarelyFunction(e).replaceAll('^', '**');
-		ExpressionEstimator.rf.forEach(s => {
-			k = s.indexOf('(');
-			if (k == -1) {//if no arguments toUpperCase pi->PI
-				s = s.toUpperCase()
-			}
-			else {// remove brackets
-				s = s.substring(0, k)
-				//symbol '(' or alphabet or digit or _ should goes after function name for all functions, compile('3*sina','sina') is ok
-				if (new RegExp(s + "(?!\\(|\\w)", 'gi').test(e)) {
-					throw new Error("'(' must go after function '" + s + "'");
-				}
-				if (s.toLowerCase() != 'random') {
-					//javascript allows 'sin()' but it's error test it
-					if (new RegExp(s + "\\(" + "(?=\\))", 'gi').test(e)) {
-						throw new Error("Function '" + s + "' should have argument(s)");
-					}
-
-				}
-			}
-			t = 'Math.' + s;
-			e = e.replace(new RegExp("(^|[^a-z0-9_\.])" + s + "(?=\\W|$)", 'gi'), '$1' + t)
-		});
-
-		//BEGIN test only allowable variables
-		//works with expression because v case sensitive
-		s = expression
-		if (v.length) {
-			v.forEach(e => {
-				if (new RegExp('\\b' + e + '\\(', 'gi').test(expression)) {// compile('3*t(t)','t') is error
-					throw new Error('variable ' + e + ' is not a function');
-				}
-				s = s.replace(new RegExp('\\b' + e + '\\b', 'g'), "")//case sensitive
-			});
-		}
-		else {
-			t = -1
-			for (const i of s.matchAll(/\bx\d+\b/gi)) {
-				k = Number(i[0].substring(1));
-				if (k > t) {
-					t = k
-				}
-			}
-			//t is used below line 164
-			s = s.replace(/\bx\d+\b/gi, "")//case insensitive
-		}
-
-		ExpressionEstimator.rf.forEach(e => {
-			k = e.indexOf('(')
-			f = k == -1 ? e : e.substr(0, k)
-			s = s.replace(new RegExp('\\b' + f + '\\b', 'gi'), "")//case insensitive
-		})
-
-		//0b10.01 or 0b.10, 0b10 - is ok
-		//0x10.01 or 0x.10, 0x10 - is ok
-		const re = /\b0[box][\w\.]+/gi
-		e = e.replace(re, e => {
-			let j, k, g, v, r, radix;
-			if (e.indexOf('_') != -1) {
-				throw new Error("Invalid number " + e);
-			}
-			g = e.substr(2).split('.');
-			if (g.length > 2) {
-				throw new Error("Invalid number " + e);
-			}
-			if (g.length == 1) {
-				return e;
-			}
-			if (g[0].length == 0 && g[1].length == 0) {
-				throw new Error("Invalid number " + e);
-			}
-			// console.log(g)
-
-			j = 'box'.indexOf(e[1].toLowerCase())
-			r = [/^[01]*$/, /^[0-7]*$/, /^[\da-fA-f]*$/][j];
-			j = [1, 3, 4][j]
-			radix = 2 ** j;
-			v = 0;
-			g.forEach((e, i) => {
-				if (!e.match(r)) {
-					throw new Error("Invalid number " + e);
-				}
-				k = e.length ? parseInt(e, radix) : 0
-				if (i == 1) {
-					k /= 1 << (j * e.length);
-				}
-				v += k;
-			});
-			return v;
-		})
-
-		//replace all exponential numbers "1.2e+2" with ""
-		s = s.replace(/[-+]?(\d*\.?\d+|\d+\.?\d*)e[-+]?\d+/gi, '')
-		//replace all hex/bin numbers	
-		s = s.replace(re, '')//regex like on line 177
-		//complie("0b") output unknown varaible "0b" not "b", so use \d* at the beginnning
-		if ((i = s.match(/\d*[a-z_]\w*/i)) != null) {
-			throw new Error("Unknown variable \"" + i[0] + "\"")
-		}
-		//END test only allowable variables
-
-		if (!v.length) {
-			for (i = 0; i <= t; i++) {
-				v.push('x' + i)
-			}
-			//if variables list is not set then X0 the same with x0
-			//X\d+ -> x\d+
-			e = e.replace(/\bX(\d+)\b/g, 'x\$1')//case sensitive
-		}
-
-		this.f = new Function(v, 'return ' + e)
-		this.arguments = v.length //number of arguments
+	init(
+		estimator,
+		_operator,
+		value,
+		left
+	) {
+		this.m_estimator = estimator;
+		this.m_operator = _operator;
+		this.m_value = value;
+		this.m_left = left;
+		this.m_right = null;
 	}
 
-	static replace = [
-		['exp()', 'log()', 'pow(,)', 'sqrt()', 'abs()', 'random()', 'min(,)', 'max(,)']
-		, ['pi', 'e', 'sqrt2', 'sqrt1_2', 'ln2', 'ln10', 'log2e', 'log10e']
-		, []//fill below
-		, []//fill below
-		, ['ceil()', 'floor()', 'round()', 'atan2(,)']
-	];
+	calculate() {
+		let l = this.m_left ? this.m_left.calculate() : 0;
+		let r = this.m_right ? this.m_right.calculate() : 0;
+		switch (this.m_operator) {
 
-	//list of functions which are not in Math object
-	static rarely = ['cot', '1/tan(#)'
-		, 'sec', '1/cos(#)'
-		, 'csc', '1/sin(#)'
-		, 'acot', 'pi/2-atan(#)'
-		, 'asec', 'acos(1/#)'
-		, 'acsc', 'asin(1/#)'
-		, 'coth', '1/tanh(#)'
-		, 'sech', '1/cosh(#)'
-		, 'csch', '1/sinh(#)'
-		, 'acoth', 'atanh(1/#)'
-		, 'asech', 'acosh(1/#)'
-		, 'acsch', 'asinh(1/#)'
-	];
+			case OPERATOR_ENUM.NUMBER:
+				return this.m_value;
 
-	static {
-		let a = ['sin', 'cos', 'tan', 'cot', 'sec', 'csc']
-		let b = a.concat(a.map(e => 'a' + e))
-		for (let i = 0; i < 2; i++) {
-			ExpressionEstimator.replace[i + 2] = b.map(e => e + (i ? 'h' : '') + '()')
+			case OPERATOR_ENUM.PLUS:
+				return l + r;
+
+			case OPERATOR_ENUM.MINUS:
+				return l - r;
+
+			case OPERATOR_ENUM.MULTIPLY:
+				return l * r;
+
+			case OPERATOR_ENUM.DIVIDE:
+				return l / r;
+
+			case OPERATOR_ENUM.UNARY_MINUS:
+				return -l;
+
+			case OPERATOR_ENUM.SIN:
+				return Math.sin(l);
+
+			case OPERATOR_ENUM.COS:
+				return Math.cos(l);
+
+			case OPERATOR_ENUM.TAN:
+				return Math.tan(l);
+
+			case OPERATOR_ENUM.COT:
+				return 1 / Math.tan(l);
+
+			case OPERATOR_ENUM.SEC:
+				return 1 / Math.cos(l);
+
+			case OPERATOR_ENUM.CSC:
+				return 1 / Math.sin(l);
+
+			case OPERATOR_ENUM.ASIN:
+				return Math.asin(l);
+
+			case OPERATOR_ENUM.ACOS:
+				return Math.acos(l);
+
+			case OPERATOR_ENUM.ATAN:
+				return Math.atan(l);
+
+			case OPERATOR_ENUM.ACOT:
+				return Math.PI / 2 - Math.atan(l);
+
+			case OPERATOR_ENUM.ASEC:
+				return Math.acos(1 / l);
+
+			case OPERATOR_ENUM.ACSC:
+				return Math.asin(1 / l);
+
+			case OPERATOR_ENUM.SINH:
+				return Math.sinh(l);
+
+			case OPERATOR_ENUM.COSH:
+				return Math.cosh(l);
+
+			case OPERATOR_ENUM.TANH:
+				return Math.tanh(l);
+
+			case OPERATOR_ENUM.COTH:
+				return 1 / Math.tanh(l);
+
+			case OPERATOR_ENUM.SECH:
+				return 1 / Math.cosh(l);
+
+			case OPERATOR_ENUM.CSCH:
+				return 1 / Math.sinh(l);
+
+			case OPERATOR_ENUM.ASINH:
+				return Math.asinh(l);
+
+			case OPERATOR_ENUM.ACOSH:
+				return Math.acosh(l);
+
+			case OPERATOR_ENUM.ATANH:
+				return Math.atanh(l);
+
+			case OPERATOR_ENUM.ACOTH:
+				return Math.atanh(1 / l);
+
+			case OPERATOR_ENUM.ASECH:
+				return Math.acosh(1 / l);
+
+			case OPERATOR_ENUM.ACSCH:
+				return Math.asinh(1 / l);
+
+			case OPERATOR_ENUM.RANDOM:
+				return Math.random();
+
+			case OPERATOR_ENUM.CEIL:
+				return Math.ceil(l);
+
+			case OPERATOR_ENUM.FLOOR:
+				return Math.floor(l);
+
+			case OPERATOR_ENUM.ROUND:
+				return Math.round(l);
+
+			case OPERATOR_ENUM.ABS:
+				return Math.abs(l);
+
+			case OPERATOR_ENUM.SIGN:
+				return Math.sign(l);
+
+			case OPERATOR_ENUM.EXP:
+				return Math.exp(l);
+
+			case OPERATOR_ENUM.LOG:
+				return Math.log(l);
+
+			case OPERATOR_ENUM.SQRT:
+				return Math.sqrt(l);
+
+			case OPERATOR_ENUM.POW:
+				return Math.pow(l, r);
+
+			case OPERATOR_ENUM.ATAN2:
+				return Math.atan2(l, r);
+
+			case OPERATOR_ENUM.MIN:
+				return Math.min(l, r);
+
+			case OPERATOR_ENUM.MAX:
+				return Math.max(l, r);
+
+			case OPERATOR_ENUM.X:
+				return this.m_estimator.getArgument(this.m_value);
+
+			default:
+				throw new Error('Node.calculate error');
 		}
-		ExpressionEstimator.rf = ExpressionEstimator.replace.flat();
-		ExpressionEstimator.rf.push('sign()');
-	}
-
-	/*replaceRarelyFunction("2*cot(3)")=2*(1/tan(3))
-	string should not have whitespaces! and lowercased!
-	replace functions which not Math object doesn't have
-	*/
-	static replaceRarelyFunction(s) {
-		let i, j, k, f, c, q, r, a, m;
-		for (f = 0; f < ExpressionEstimator.rarely.length - 1; f += 2) {
-			r = ExpressionEstimator.rarely[f]
-			a = new RegExp(r + '\\(', 'gi')
-			while ((m = a.exec(s)) != null) {
-				i = m.index
-				c = s.charAt(i - 1).toLowerCase()
-				q = s.substring(0, i) + '(';
-				i += r.length + 1;
-				if (i != r.length + 1 && c >= 'a' && c <= 'z') {
-					continue;
-				}
-
-				for (k = 0, j = i; j < s.length; j++) {
-					c = s.charAt(j);
-					if (c == '(') {
-						k++;
-					}
-					else if (c == ')') {
-						k--;
-					}
-					if (k == -1) {
-						break;
-					}
-				}
-
-				s = q + ExpressionEstimator.rarely[f + 1].replace(/#/gi, '(' + s.substring(i, j) + ')') + s.substring(j)
-			}
-		}
-		return s
-	}
-
-	getArguments() {
-		return this.arguments
 	}
 }

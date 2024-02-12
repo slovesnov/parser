@@ -16,7 +16,7 @@ $e = new ExpressionEstimator('x0+2*x1');
 $v = $e->calculate(1, 3);
 echo "$v<br>";
 
-$e->compile('a+2*b', 'a', 'b'); //or $e->compile('a+2*A',['a','b']);
+$e->compile('a+2*b', 'a', 'b'); //or $e->compile('a+2*b',['a','b']);
 $v = $e->calculate(1, 1);
 echo "$v<br>";
 
