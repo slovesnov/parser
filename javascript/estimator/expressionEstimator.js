@@ -172,6 +172,20 @@ class ExpressionEstimator {
 		return node;
 	}
 
+	#parse1() {
+		let node
+		if (this.m_operator == OPERATOR_ENUM.MINUS) {
+			this.#getToken();
+			node = new Node(this, OPERATOR_ENUM.UNARY_MINUS, this.#parse2());
+		} else {
+			if (this.m_operator == OPERATOR_ENUM.PLUS) {
+				this.#getToken();
+			}
+			node = this.#parse2();
+		}
+		return node;
+	}
+
 	#parse2() {
 		let node = this.#parse3();
 		while (
@@ -188,20 +202,6 @@ class ExpressionEstimator {
 				throw new Error("two operators in a row");
 			}
 			node.m_right = this.#parse3();
-		}
-		return node;
-	}
-
-	#parse1() {
-		let node
-		if (this.m_operator == OPERATOR_ENUM.MINUS) {
-			this.#getToken();
-			node = new Node(this, OPERATOR_ENUM.UNARY_MINUS, this.#parse2());
-		} else {
-			if (this.m_operator == OPERATOR_ENUM.PLUS) {
-				this.#getToken();
-			}
-			node = this.#parse2();
 		}
 		return node;
 	}
