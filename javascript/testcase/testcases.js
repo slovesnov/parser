@@ -716,4 +716,33 @@ compile_error
 
 "sqrt" "sqrt" "0"
 compile_calculate
-compile_error`
+compile_error
+
+"(1+2]"
+static_compile
+compile_error
+
+"(1+2}"
+static_compile
+compile_error
+
+"[1+2)"
+static_compile
+compile_error
+
+"[1+2}"
+static_compile
+compile_error
+
+"{1+2)"
+static_compile
+compile_error
+
+"{1+2]"
+static_compile
+compile_error
+
+"2*2^3"
+static_compile
+16
+`

@@ -155,62 +155,39 @@ class ExpressionEstimator
 		}
 	}
 
-	private function parse()
-	{
-		$node = $this->parse1();
-		while (
-			$this->m_operator == OPERATOR_ENUM::PLUS
-			|| $this->m_operator == OPERATOR_ENUM::MINUS
-		) {
-			$node = new Node($this, $this->m_operator, $node);
-			$this->getToken();
-			if (
-				$this->m_operator == OPERATOR_ENUM::PLUS
-				|| $this->m_operator == OPERATOR_ENUM::MINUS
-			) {
-				throw new Error("two operators in a row");
-			}
-			$node->m_right = $this->parse1();
-		}
-		return $node;
-	}
+	private const A = [
+		[OPERATOR_ENUM::PLUS, OPERATOR_ENUM::MINUS], 0, [OPERATOR_ENUM::MULTIPLY, OPERATOR_ENUM::DIVIDE], [OPERATOR_ENUM::POW]
+	];
 
-	private function parse1()
+	private function parse($n = 0)
 	{
-		if ($this->m_operator == OPERATOR_ENUM::MINUS) {
-			$this->getToken();
-			$node = new Node($this, OPERATOR_ENUM::UNARY_MINUS, $this->parse2());
-		} else {
-			if ($this->m_operator == OPERATOR_ENUM::PLUS) {
+		if ($n == 1) {
+			if ($this->m_operator == OPERATOR_ENUM::MINUS) {
 				$this->getToken();
+				return new Node($this, OPERATOR_ENUM::UNARY_MINUS, $this->parse($n + 1));
+			} else {
+				if ($this->m_operator == OPERATOR_ENUM::PLUS) {
+					$this->getToken();
+				}
+				return $this->parse($n + 1);
 			}
-			$node = $this->parse2();
 		}
-		return $node;
-	}
-
-	private function parse2()
-	{
-		$node = $this->parse3();
-		while (
-			$this->m_operator == OPERATOR_ENUM::MULTIPLY
-			|| $this->m_operator == OPERATOR_ENUM::DIVIDE
-			|| $this->m_operator == OPERATOR_ENUM::POW
-		) {
+		if ($n == 4) {
+			return $this->parse4();
+		}
+		$node = $this->parse($n + 1);
+		while (in_array($this->m_operator, self::A[$n])) {
 			$node = new Node($this, $this->m_operator, $node);
 			$this->getToken();
-			if (
-				$this->m_operator == OPERATOR_ENUM::PLUS
-				|| $this->m_operator == OPERATOR_ENUM::MINUS
-			) {
+			if (in_array($this->m_operator, self::A[0])) { //here A[0]
 				throw new Error("two operators in a row");
 			}
-			$node->m_right = $this->parse3();
+			$node->m_right = $this->parse($n + 1);
 		}
 		return $node;
 	}
 
-	private function parse3()
+	private function parse4()
 	{
 		if ($this->m_operator >= OPERATOR_ENUM::POW && $this->m_operator <= OPERATOR_ENUM::SQRT) {
 			if ($this->m_operator <= OPERATOR_ENUM::MAX) {
@@ -358,13 +335,7 @@ class ExpressionEstimator
 
 	private function checkBracketBalance($open)
 	{
-		if (($open == OPERATOR_ENUM::LEFT_BRACKET
-				&& $this->m_operator != OPERATOR_ENUM::RIGHT_BRACKET)
-			|| ($open == OPERATOR_ENUM::LEFT_SQUARE_BRACKET
-				&& $this->m_operator != OPERATOR_ENUM::RIGHT_SQUARE_BRACKET)
-			|| ($open == OPERATOR_ENUM::LEFT_CURLY_BRACKET
-				&& $this->m_operator != OPERATOR_ENUM::RIGHT_CURLY_BRACKET)
-		) {
+		if (($this->m_operator != $open + 1)) {
 			throw new Error(
 				"close bracket expected or another type of close bracket"
 			);
