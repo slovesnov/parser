@@ -136,7 +136,7 @@ class ExpressionEstimator {
 			} else {
 				c = 0;
 				for (i = this.m_position++; this.m_position < this.m_expression.length && (this.#isDigitOrPoint() || this.m_expression[this.m_position] == 'E'
-					|| this.m_expression[this.m_position - 1] == 'E' && in_array(this.m_expression[this.m_position], ["+", "-"])); this.m_position++) {
+					|| this.m_expression[this.m_position - 1] == 'E' && ["+", "-"].includes(this.m_expression[this.m_position])); this.m_position++) {
 					if (this.#isPoint()) {
 						if (++c > 1) {
 							break;
