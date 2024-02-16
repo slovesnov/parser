@@ -175,9 +175,6 @@ class ExpressionEstimator {
 		while (a[n].includes(this.m_operator)) {
 			node = new Node(this, this.m_operator, node);
 			this.#getToken();
-			if (a[0].includes(this.m_operator)) {//here a[0]
-				throw new Error("two operators in a row");
-			}
 			node.m_right = this.#parse(n + 1);
 		}
 		return node;
@@ -248,6 +245,9 @@ class ExpressionEstimator {
 	compile(expression, ...variables) {
 		variables = Array.isArray(variables[0]) ? variables[0] : variables;
 		let v = variables, t, m;
+		if (/[+-]{2}/.test(expression)) {
+			throw new Error("two operators in a row");
+		}
 		let s = expression.replace(/\s+/g, "").replace(/\*{2}/g, "^");
 		if (s.includes(ExpressionEstimator.R)) {
 			throw new Error(ExpressionEstimator.R + " found in string");

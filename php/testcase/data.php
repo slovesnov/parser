@@ -12,9 +12,14 @@ class Data
 		}
 		$a = preg_split("~\"\\s+\"~", substr($s, 1, -1));
 		$this->compile = $a[0];
-		if (count($a) > 2) {
+		if (count($a) > 1) {
 			$this->variables = strlen($a[1]) == 0 ? [] : preg_split("~\\s+~", $a[1]);
-			$this->values = preg_split("~\\s+~", $a[2]);
+			if (count($a) > 2) {
+				$this->values = preg_split("~\\s+~", $a[2]);
+			}
+		}
+		else{
+			$this->variables = [];
 		}
 	}
 	public function __toString()

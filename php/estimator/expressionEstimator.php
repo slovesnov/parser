@@ -179,9 +179,6 @@ class ExpressionEstimator
 		while (in_array($this->m_operator, self::A[$n])) {
 			$node = new Node($this, $this->m_operator, $node);
 			$this->getToken();
-			if (in_array($this->m_operator, self::A[0])) { //here A[0]
-				throw new Error("two operators in a row");
-			}
 			$node->m_right = $this->parse($n + 1);
 		}
 		return $node;
@@ -260,6 +257,9 @@ class ExpressionEstimator
 	{
 		$variables = self::modifyArguments($variables);
 		$v = $variables;
+		if (preg_match("~[+-]{2}~", $expression)) {
+			throw new Error("two operators in a row");
+		}
 		$s = preg_replace("/\\s+/", "", $expression);
 		$s = preg_replace("/\\*{2}/", "^", $s);
 		if (strpos($s, self::R) !== false) {
