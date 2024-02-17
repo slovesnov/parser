@@ -4,18 +4,11 @@
 include('estimator/expressionEstimator.php');
 
 $e = new ExpressionEstimator();
-$e->compile('a+2*A', 'a', 'A');
-$v = $e->calculate(1, 2);
+$e->compile('x0b*2');
+$v = $e->calculate(1);
 echo "$v<br>";
 
-$e->compile('a+2*A', ['a', 'A']);
-$v = $e->calculate(1, 2);
+$e->compile('X0b*2');
+$v = $e->calculate(1);
 echo "$v<br>";
 
-$e->compile('a+2*A', 'a', 'A');
-$v = $e->calculate([1, 2]);
-echo "$v<br>";
-
-$e->compile('a+2*A', ['a', 'A']);
-$v = $e->calculate([1, 2]);
-echo "$v<br>";

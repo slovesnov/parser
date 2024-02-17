@@ -70,7 +70,7 @@ class ExpressionEstimator {
 			);
 			token = this.m_expression.substring(i, this.m_position);
 
-			if (token[0] == 'X' && token.length > 1 && /\d/.test(token[1])) {
+			if (/^x\d+$/i.test(token)) {
 				j = parseInt(token.substring(1));
 				if (this.m_arguments < j + 1) {
 					this.m_arguments = j + 1;

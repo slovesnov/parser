@@ -781,4 +781,12 @@ compile_error
 "1--2"
 static_compile
 compile_error
+
+"x0b*2" "" "1"
+compile_calculate
+compile_error
+
+"x*2" "" "1"
+compile_calculate
+compile_error
 `

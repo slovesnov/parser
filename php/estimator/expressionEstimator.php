@@ -72,7 +72,7 @@ class ExpressionEstimator
 			);
 			$token =  substr($this->m_expression, $i, $this->m_position - $i);
 
-			if ($token[0] == 'X' && strlen($token) > 1 && ctype_digit($token[1])) {
+			if (preg_match("~^x\d+$~i",$token)) {
 				$j = (int)substr($token, 1);
 				if ($this->m_arguments < $j + 1) {
 					$this->m_arguments = $j + 1;
