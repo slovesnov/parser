@@ -789,4 +789,8 @@ compile_error
 "x*2" "" "1"
 compile_calculate
 compile_error
+
+"x1e0*2" "" "1"
+compile_calculate
+compile_error
 `
