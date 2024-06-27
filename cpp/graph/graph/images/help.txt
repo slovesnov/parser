@@ -14,6 +14,8 @@ ico editor online
 https://redketchup.io/icon-editor
 can select all from paint and paste to upper url
 
+fullscreen.png
+https://www.iconsdb.com/blue-icons/fullscreen-12-icon.html
 
 make png with begger size
 then trim in photoshop
@@ -21,4 +23,10 @@ select all in photoshop can be paset in https://redketchup.io/icon-editor
 //paste in paint
 //select all
 then paste in https://redketchup.io/icon-editor
+
+save/new from bridge
+folder resize from d:\!!slovesno\soft\иконы\kde\modero_icons\24x24\actions\fileopen.png
+on/off https://www.iconsdb.com/green-icons/circle-icon.html
+
+triangleup,triangledown https://en.m.wikipedia.org/wiki/File:Green_triangle.svg
 

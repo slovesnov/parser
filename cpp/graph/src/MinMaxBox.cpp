@@ -70,6 +70,11 @@ void MinMaxBox::set(std::string const s[]) {
 	inputChanged(false);
 }
 
+void MinMaxBox::set(std::string const &s1, std::string const &s2) {
+	std::string s[] = { s1, s2 };
+	set(s);
+}
+
 void MinMaxBox::setSize(int size) {
 	m_size = size;
 }
@@ -136,6 +141,9 @@ void MinMaxBox::inputChanged(bool redraw/*=true*/) {
 	}
 
 	if (!redraw) {
+		if (ok()) {
+			set(v[0], v[1]);
+		}
 		return;
 	}
 
@@ -176,4 +184,17 @@ void MinMaxBox::updateEntryColor(int i) {
 
 bool MinMaxBox::inEntry(GtkWidget *w) {
 	return oneOf(w, m_entry, SIZEI(m_entry));
+}
+
+std::string MinMaxBox::toString() {
+	std::string s;
+	int i = 0;
+	for (auto a : m_entry) {
+		if (i) {
+			s += ' ';
+		}
+		s += Graph::toSaveString(gtk_entry_get_text(GTK_ENTRY(a)));
+		i++;
+	}
+	return s;
 }
