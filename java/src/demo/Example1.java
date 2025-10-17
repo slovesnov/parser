@@ -1,10 +1,3 @@
-/******************************************************
-Copyright (c/c++) 2013-doomsday by Aleksey Slovesnov 
-homepage http://slovesnov.users.sourceforge.net/?parser
-email slovesnov@yandex.ru
-All rights reserved.
-******************************************************/
-
 package demo;
 
 import estimator.ExpressionEstimator;
@@ -18,7 +11,6 @@ public class Example1 {
 		try {
 			for (String e : a) {
 				System.out.println(ExpressionEstimator.calculate(e));
-
 			}
 		} catch (Exception ex) {
 			System.out.println(ex.getMessage());

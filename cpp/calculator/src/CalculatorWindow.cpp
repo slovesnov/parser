@@ -1,11 +1,3 @@
-/******************************************************
- Copyright (c/c++) 2013-doomsday by Aleksey Slovesnov
- homepage http://slovesnov.users.sourceforge.net/?calculator
- email slovesnov@yandex.ru
- All rights reserved.
- file created 3 jul 2014
- ******************************************************/
-
 #include <cassert>
 #include <cmath>
 #include "CalculatorWindow.h"
@@ -16,7 +8,7 @@ enum {
 	PIXBUF_COL, TEXT_COL
 };
 
-const char HOMEPAGE[] = "http://slovesnov.users.sf.net/?calculator"; //use short name because string is used in about dialog
+const char HOMEPAGE[] = "http://slovesnov.rf.gd?calculator";
 const char CERROR[] = "cerror";
 const char MAIL[] = "slovesnov@yandex.ru";
 const std::string LNG[] = { "en", "ru" };

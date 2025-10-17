@@ -1,13 +1,3 @@
-/*
- * TestFormWindow.h
- *
- *  Created on: 16.04.2022
- *      Author: alexey slovesnov
- * copyright(c/c++): 2014-doomsday
- *           E-mail: slovesnov@yandex.ru
- *         homepage: slovesnov.users.sourceforge.net
- */
-
 #ifndef TESTFORMWINDOW_H_
 #define TESTFORMWINDOW_H_
 

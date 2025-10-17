@@ -1,22 +1,12 @@
-/*
- * GraphWindow.cpp
- *
- *  Created on: 13.04.2022
- *      Author: alexey slovesnov
- * copyright(c/c++): 2014-doomsday
- *           E-mail: slovesnov@yandex.ru
- *         homepage: slovesnov.users.sourceforge.net
- */
-
 #include <cmath>
 
 #include "GraphWindow.h"
-#include "aslov.h"
+#include <regex>
 
 GraphWindow *pWindow;
 
 const std::string CONFIG_TAGS[] = { "version", "language" };
-const std::string URL = "http://slovesnov.users.sourceforge.net?graph";
+const std::string URL = "https://slovesnov.rf.gd?graph";
 const int startGraphs = 1;
 
 enum {
@@ -25,8 +15,43 @@ enum {
 
 const std::string LNG[] = { "en", "ru" };
 
+std::string removeEndingZero(std::string s) {
+	/*
+	 std::string a[]={"1.2300","45.00","800","340."};
+	 1.2300 1.23
+	 45.00 45
+	 800 800
+	 340. 340
+	 */
+	std::regex re("(\\.[1-9]*)(0+)$");
+	std::string r;
+	r = std::regex_replace(s, re, "$1");
+	size_t i = r.length() - 1;
+	if (!r.empty() && r[i] == '.') {
+		r = r.substr(0, i);
+	}
+	return r;
+}
+
+std::string removeEndingZerosMinusZero(std::string s) {
+	std::string r = removeEndingZero(s);
+	return r == "-0" ? "0" : r;
+}
+
+static void grid_gialog_button_clicked(GtkWidget *widget, STRING_ENUM e) {
+	pWindow->gridDialogButtonClicked(e);
+}
+
 static void button_clicked(GtkWidget *widget, gpointer) {
 	pWindow->clickButton(widget);
+}
+
+static void input_changed(GtkWidget *w) {
+	pWindow->inputChanged(w);
+}
+
+static void check_changed(GtkWidget *w) {
+	pWindow->checkChanged(w);
 }
 
 static gboolean mouse_press_event(GtkWidget *widget, GdkEventButton *event,
@@ -73,6 +98,29 @@ static gboolean draw_callback(GtkWidget *widget, cairo_t *cr, gpointer data) {
 	pWindow->draw(cr, gtk_widget_get_allocated_width(widget),
 			gtk_widget_get_allocated_height(widget));
 	return FALSE;
+}
+
+static void drag_and_drop_received(GtkWidget*, GdkDragContext *context, gint x,
+		gint y, GtkSelectionData *data, guint ttype, guint time, gpointer) {
+
+	gint l = gtk_selection_data_get_length(data);
+	gint a = gtk_selection_data_get_format(data);
+	if (l >= 0 && a == 8) {
+		gchar **uris = gtk_selection_data_get_uris(data);
+		for (gint i = 0; uris[i] != 0; i++) {
+			gchar *fn = g_filename_from_uri(uris[i], NULL, NULL);
+			std::string p = fn;
+			g_free(fn);
+			if (!isDir(p)
+					&& getFileInfo(p, FILEINFO::LOWER_EXTENSION)
+							== DEFAULT_EXTENSION) {
+				pWindow->load(p);
+				break;
+			}
+		}
+		g_strfreev(uris);
+		gtk_drag_finish(context, true, false, time);
+	}
 }
 
 GraphWindow::GraphWindow() {
@@ -188,6 +236,11 @@ GraphWindow::GraphWindow() {
 
 	gtk_window_maximize(GTK_WINDOW(m_window));
 
+	gtk_drag_dest_set(m_window, GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
+	gtk_drag_dest_add_uri_targets(m_window);
+	g_signal_connect(m_window, "drag-data-received",
+			G_CALLBACK(drag_and_drop_received), NULL);
+
 	gtk_widget_show_all(m_window);
 
 	//set dot as decimal separator, standard locale, for output
@@ -197,9 +250,9 @@ GraphWindow::GraphWindow() {
 			G_CALLBACK(gtk_main_quit), G_OBJECT(m_window));
 
 	setDefaultPathUpdateTitle();
-
+	m_grid.reset();
+	//load("C:\\Users\\user\\git\\graph\\graph\\p_mass.gr");
 	gtk_main();
-
 }
 
 GraphWindow::~GraphWindow() {
@@ -250,6 +303,7 @@ void GraphWindow::clickButton(IBUTTON n) {
 		updateEnableClose();
 		updateTriangleButton();
 		setDefaultPathUpdateTitle();
+		m_grid.reset();
 		break;
 
 	case IBUTTON_LOAD:
@@ -291,6 +345,10 @@ void GraphWindow::clickButton(IBUTTON n) {
 		updateTriangleButton();
 		break;
 
+	case IBUTTON_GRID:
+		showGridDialog();
+		break;
+
 	case IBUTTON_ON:
 	case IBUTTON_OFF:
 		for (auto a : m_g) {
@@ -300,7 +358,7 @@ void GraphWindow::clickButton(IBUTTON n) {
 		break;
 
 	case IBUTTON_HELP:
-		openURL(URL);
+		openURL(URL + "," + LNG[m_language]);
 		break;
 
 	default:
@@ -316,6 +374,7 @@ double GraphWindow::adjustAxis(double v) {
 
 void GraphWindow::draw(cairo_t *cr, int w, int h) {
 	double x, y;
+	std::string s;
 
 	if (m_setaxisOnDraw) {
 		auto k = MAXY * gtk_widget_get_allocated_width(m_area)
@@ -334,7 +393,8 @@ void GraphWindow::draw(cairo_t *cr, int w, int h) {
 		return;
 	}
 
-	Point p = toScreen(0, 0);
+	//also uses below
+	const Point p = toScreen(0, 0);
 	x = adjustAxis(p.x);
 	y = adjustAxis(p.y);
 
@@ -346,8 +406,97 @@ void GraphWindow::draw(cairo_t *cr, int w, int h) {
 
 	cairo_move_to(cr, x, 0);
 	cairo_line_to(cr, x, h);
-
 	cairo_stroke(cr);
+
+	int i, j;
+	double v, x1, y1, step;
+
+	const double dashed[] = { 1, 10 };
+	const int fontSize = 13;
+	const bool xvisible = p.y >= 0 && p.y < h;
+	const bool yvisible = p.x >= 0 && p.x < w;
+	const bool bothVisible = xvisible && yvisible;
+	const bool hasGrid = m_grid.check[GRID_CHECK_SHOW_X]
+			|| m_grid.check[GRID_CHECK_SHOW_Y];
+
+	if (hasGrid) {
+		cairo_set_line_width(cr, 1);
+		cairo_set_dash(cr, dashed, SIZEI(dashed), 0);
+		cairo_set_font_size(cr, fontSize);
+	}
+
+	if (m_grid.check[GRID_CHECK_SHOW_X]) {
+		const int digits = int(m_grid.value[GRID_ENTRY_DIGITS_X]);
+		if (m_grid.check[GRID_CHECK_PIXELS_X]) {
+			const int delta = m_grid.value[GRID_ENTRY_STEP_X];
+			//v = fmod(v,delta)+trunc(v,delta)*delta
+			v = yvisible ? p.x : w / 2;
+			j = trunc(v / delta);
+			for (x = fmod(v, delta), i = 0; x < w; x += delta, i++) {
+				if (i != j || !bothVisible) {
+					s = removeEndingZerosMinusZero(
+							format("%.*lf", digits, fromScreenX(x)));
+					cairo_move_to(cr, x, xvisible ? p.y : fontSize);
+					cairo_show_text(cr, s.c_str());
+				}
+
+				v = adjustAxis(x);
+				cairo_move_to(cr, v, 0);
+				cairo_line_to(cr, v, h);
+			}
+		} else {
+			//ceil for round x%100=0 800 900 1000...
+			step = m_grid.value[GRID_ENTRY_STEP_X];
+			for (x1 = ceil(fromScreenX(0) / step) * step, i = 0;
+					i < m_grid.value[GRID_ENTRY_MAXSTEPS]
+							&& (x = toScreenX(x1)) < w; x1 += step, i++) {
+				s = removeEndingZerosMinusZero(format("%.*lf", digits, x1));
+				cairo_move_to(cr, x, xvisible ? p.y : fontSize);
+				cairo_show_text(cr, s.c_str());
+
+				v = adjustAxis(x);
+				cairo_move_to(cr, v, 0);
+				cairo_line_to(cr, v, h);
+			}
+		}
+
+	}
+	if (m_grid.check[GRID_CHECK_SHOW_Y]) {
+		const int digits = int(m_grid.value[GRID_ENTRY_DIGITS_Y]);
+		if (m_grid.check[GRID_CHECK_PIXELS_Y]) {
+			const int delta = m_grid.value[GRID_ENTRY_STEP_Y];
+			v = xvisible ? p.y : h / 2;
+			j = trunc(v / delta);
+			for (y = fmod(v, delta), i = 0; y < h; y += delta, i++) {
+				if (i != j || !bothVisible) {
+					s = removeEndingZerosMinusZero(
+							format("%.*lf", digits, fromScreenY(y)));
+					cairo_move_to(cr, yvisible ? p.x : 0, y);
+					cairo_show_text(cr, s.c_str());
+				}
+
+				v = adjustAxis(y);
+				cairo_move_to(cr, 0, v);
+				cairo_line_to(cr, w, v);
+			}
+		} else {
+			step = m_grid.value[GRID_ENTRY_STEP_Y];
+			for (y1 = ceil(fromScreenY(h) / step) * step, i = 0;
+					i < m_grid.value[GRID_ENTRY_MAXSTEPS]
+							&& (y = toScreenY(y1)) > 0; y1 += step, i++) {
+				s = removeEndingZerosMinusZero(format("%.*lf", digits, y1));
+				cairo_move_to(cr, yvisible ? p.x : 0, y);
+				cairo_show_text(cr, s.c_str());
+
+				v = adjustAxis(y);
+				cairo_move_to(cr, 0, v);
+				cairo_line_to(cr, w, v);
+			}
+		}
+	}
+	if (hasGrid) {
+		cairo_stroke(cr);
+	}
 
 	cairo_set_line_width(cr, 1.5);
 
@@ -365,6 +514,7 @@ void GraphWindow::draw(cairo_t *cr, int w, int h) {
 		if (!a.m_show) {
 			continue;
 		}
+		//printl(int(a.m_type))
 		if (a.m_type == GraphType::SIMPLE) {
 			a.recount(fromScreenX(0), fromScreenX(w), w);
 		}
@@ -377,7 +527,7 @@ void GraphWindow::draw(cairo_t *cr, int w, int h) {
 			}
 			x = toScreenX(p.x);
 			y = toScreenY(p.y);
-			if (a.m_points) {
+			if (a.m_subtype == GraphSubType::POINTS) {
 				cairo_arc(cr, x, y, 5, 0, 2 * G_PI);
 				cairo_close_path(cr);
 				cairo_stroke_preserve(cr);
@@ -408,8 +558,9 @@ void GraphWindow::draw(cairo_t *cr, int w, int h) {
 
 void GraphWindow::mouseButtonDown(GdkEventButton *event) {
 	if (event->button == 1) {
-		m_dragx = event->x;
-		m_dragy = event->y;
+		//8sep24 fixed bug with mouse move over window and then go to other window and click on window, need also set m_dragxe, m_dragye
+		m_dragx = m_dragxe = event->x;
+		m_dragy = m_dragye = event->y;
 	} else if (event->button == 3) {
 		clickButton(IBUTTON_VIEWMAG_MINUS);
 	}
@@ -419,7 +570,7 @@ void GraphWindow::mouseButtonUp(GdkEventButton *event) {
 	double v1, v2;
 
 	if (m_dragx != NO_DRAG) {
-		//click and release same point skip
+//click and release same point skip
 		if (event->x == m_dragx || event->y == m_dragy) {
 			m_dragx = NO_DRAG;
 			return;
@@ -454,20 +605,24 @@ void GraphWindow::mouseLeave(GdkEventCrossing *event) {
 	gtk_label_set_text(GTK_LABEL(m_coordinates), "");
 }
 
-double GraphWindow::fromScreenX(int v) {
+double GraphWindow::fromScreenX(double v) {
 	return m_xy[0].fromScreen(v);
 }
 
-double GraphWindow::fromScreenY(int v) {
+double GraphWindow::fromScreenY(double v) {
 	return m_xy[1].fromScreen(v);
 }
 
-int GraphWindow::toScreenX(double v) {
+double GraphWindow::toScreenX(double v) {
 	return m_xy[0].toScreen(v);
 }
 
-int GraphWindow::toScreenY(double v) {
+double GraphWindow::toScreenY(double v) {
 	return m_xy[1].toScreen(v);
+}
+
+Point GraphWindow::toScreen(double x, double y) {
+	return {toScreenX(x),toScreenY(y)};
 }
 
 void GraphWindow::axisChanged(bool update/*=true*/) {
@@ -595,13 +750,15 @@ void GraphWindow::save() {
 		return;
 	}
 	setPathUpdateTitle(s);
-	std::ofstream f(s);
+	std::ofstream f(s, std::ios::binary);	//binary no \r
 	s = forma(ExpressionEstimator::version);
 	int i = 0;
 	for (auto a : m_xy) {
-		s += format("\nminmax_%c=", "xy"[i]) + " " + a.toString();
+		s += format("\nminmax_%c=", "xy"[i]) + a.toString();
 		i++;
 	}
+	s += m_grid.toString();
+
 	for (auto a : m_g) {
 		s += "\n" + a->toString();
 	}
@@ -613,6 +770,11 @@ void GraphWindow::load() {
 	if (s.empty()) {
 		return;
 	}
+	//printl(s)
+	load(s);
+}
+
+void GraphWindow::load(std::string s) {
 	setPathUpdateTitle(s);
 	std::ifstream f(s);
 	std::stringstream buffer;
@@ -639,6 +801,12 @@ void GraphWindow::load() {
 				}
 				m_xy[i - 1].set(t[0], t[1]);
 				m_xy[i - 1].inputChanged();
+			} else if (i == 3) {
+				s = m_grid.set(t);
+				if (!s.empty()) {
+					error = 1;
+					break;
+				}
 			} else {
 				if (t.size() < 2) {
 					error = __LINE__;
@@ -648,8 +816,11 @@ void GraphWindow::load() {
 				for (j = 0; j < 2; j++) {
 					if (!parseString(t[j], p[j])) {
 						error = __LINE__;
-						goto l667;
+						break;
 					}
+				}
+				if (j < 2) {
+					break;
 				}
 				const size_t sz[] = { 4, 7, 8 };
 				if (p[0] < 0 || p[0] > 2 || t.size() != sz[p[0]]) {
@@ -671,10 +842,13 @@ void GraphWindow::load() {
 			}
 		}
 	}
-	l667: if (error) {
-		message(getLanguageString(ERROR),
-				getLanguageString(ERROR_FILE_IS_CORRUPTED)
-						+ std::string(" line : ") + std::to_string(error));
+	if (error) {
+		showModalDialog(getLanguageString(ERROR),
+				getLanguageString(ERROR_FILE_IS_CORRUPTED) + std::string("\n")
+						+ (error == 1 ?
+								s :
+								getFileInfo(__FILE__, FILEINFO::NAME) + ":"
+										+ std::to_string(error)));
 		if (m_g.empty()) {
 			addGraph(GraphType::SIMPLE, 0);
 		}
@@ -766,19 +940,161 @@ void GraphWindow::setDefaultPathUpdateTitle() {
 	setPathUpdateTitle(s);
 }
 
-void GraphWindow::message(std::string title, std::string message) {
-	GtkWindow *parent = GTK_WINDOW(m_window);
-	GtkWidget *dialog, *label, *content_area;
-	GtkDialogFlags flags;
-	flags = GTK_DIALOG_DESTROY_WITH_PARENT;
-	dialog = gtk_dialog_new_with_buttons(title.c_str(), parent, flags, "_OK",
-			GTK_RESPONSE_NONE,
-			NULL);
-	content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-	label = gtk_label_new(message.c_str());
+void GraphWindow::showGridDialog() {
+	int i;
+	GtkWidget *b, *b1, *e, *f, *bh, *c;
+	m_gridStart = m_grid;
 
-	g_signal_connect_swapped(dialog, "response",
-			G_CALLBACK (gtk_widget_destroy), dialog);
-	gtk_container_add(GTK_CONTAINER(content_area), label);
-	gtk_widget_show_all(dialog);
+	bh = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
+	for (i = 0; i < 2; i++) {
+		b = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+		m_gridCheck[2 * i] = c = gtk_check_button_new_with_label(
+				getLanguageString(SHOW_LINES));
+		gtk_container_add(GTK_CONTAINER(b), c);
+
+		b1 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
+		m_gridEntry[2 * i] = e = gtk_entry_new();
+		gtk_container_add(GTK_CONTAINER(b1),
+				gtk_label_new(getLanguageString(STEP)));
+		gtk_container_add(GTK_CONTAINER(b1), e);
+		m_gridCheck[2 * i + 1] = c = gtk_check_button_new_with_label(
+				getLanguageString(PIXELS));
+		gtk_container_add(GTK_CONTAINER(b1), c);
+		gtk_container_add(GTK_CONTAINER(b), b1);
+
+		b1 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
+		m_gridEntry[2 * i + 1] = e = gtk_entry_new();
+		gtk_container_add(GTK_CONTAINER(b1),
+				gtk_label_new(getLanguageString(PRECISION)));
+		gtk_container_add(GTK_CONTAINER(b1), e);
+		gtk_container_add(GTK_CONTAINER(b), b1);
+
+		f = gtk_frame_new(getLanguageString(i ? Y_AXIS : X_AXIS));
+		gtk_frame_set_label_align(GTK_FRAME(f), 0.06, 0.5);
+		gtk_container_add(GTK_CONTAINER(f), b);
+
+		gtk_container_add(GTK_CONTAINER(bh), f);
+	}
+
+	b1 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
+	m_gridEntry[GRID_ENTRY_SIZE - 1] = e = gtk_entry_new();
+	gtk_box_pack_start(GTK_BOX(b1),
+			gtk_label_new(getLanguageString(MAXIMUM_NUMBER_OF_STEPS)), 1, 1, 0);
+	gtk_box_pack_start(GTK_BOX(b1), e, 1, 1, 0);
+
+	b = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+	gtk_container_add(GTK_CONTAINER(b), bh);
+	gtk_container_add(GTK_CONTAINER(b), b1);
+	gtk_container_add(GTK_CONTAINER(b), m_modalLabel = gtk_label_new(""));
+
+	m_grid.toDialog();
+	//after params are set
+	for (auto e : m_gridCheck) {
+		g_signal_connect(e, "toggled", G_CALLBACK(check_changed), 0);
+	}
+	for (auto e : m_gridEntry) {
+		g_signal_connect(e, "changed", G_CALLBACK(input_changed), GP(-1));
+	}
+
+	auto r = showModalDialog(getLanguageString(GRID), b, false);
+	if (r != GTK_RESPONSE_OK) {
+		//GTK_RESPONSE_CANCEL or GTK_RESPONSE_DELETE_EVENT
+		m_grid = m_gridStart;
+	}
+}
+
+void GraphWindow::inputChanged(GtkWidget *w) {
+	const char *t = gtk_entry_get_text(GTK_ENTRY(w));
+	int i = INDEX_OF(w, m_gridEntry);
+	auto s = replaceAll(m_grid.setValue(t, i), "\n", " ");
+	gtk_label_set_text(GTK_LABEL(m_modalLabel), s.c_str());
+	addRemoveClass(w, CERROR, !s.empty()); //red font
+	gtk_widget_set_sensitive(m_modalButton[0], m_grid.ok());
+}
+
+void GraphWindow::checkChanged(GtkWidget *w) {
+	int i = INDEX_OF(w, m_gridCheck);
+	if (i == GRID_CHECK_PIXELS_X || i == GRID_CHECK_PIXELS_Y) {
+		m_grid.check[i] = gtk_toggle_button_get_active(
+				GTK_TOGGLE_BUTTON(pWindow->m_gridCheck[i]));
+		inputChanged(
+				m_gridEntry[
+						i == GRID_CHECK_PIXELS_X ?
+								GRID_ENTRY_STEP_X : GRID_ENTRY_STEP_Y]);
+	}
+}
+
+std::string GraphWindow::toSaveString(const gchar *p) {
+	return SEPARATOR + std::string(p) + SEPARATOR;
+}
+
+std::string GraphWindow::toSaveString(int i) {
+	return SEPARATOR + std::to_string(i) + SEPARATOR;
+}
+
+std::string GraphWindow::toSaveString(double i) {
+	return SEPARATOR + removeEndingZerosMinusZero(std::to_string(i)) + SEPARATOR;
+}
+
+gint GraphWindow::showModalDialog(std::string title, std::string text) {
+	return showModalDialog(title, gtk_label_new(text.c_str()));
+}
+
+gint GraphWindow::showModalDialog(std::string title, GtkWidget *w,
+		bool simple) {
+	GtkWidget *b, *b1, *b2;
+	int i;
+	auto d = m_modal = gtk_dialog_new();
+	gtk_window_set_modal(GTK_WINDOW(d), TRUE);
+	gtk_window_set_transient_for(GTK_WINDOW(d), GTK_WINDOW(m_window));
+
+	gtk_window_set_title(GTK_WINDOW(d), title.c_str());
+	gtk_window_set_resizable(GTK_WINDOW(d), 0);
+
+	b = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+	gtk_container_add(GTK_CONTAINER(b), w);
+	b1 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
+	std::vector<STRING_ENUM> v;
+	if (simple) {
+		v = { STRING_ENUM::OK };
+	} else {
+		v = { STRING_ENUM::OK, STRING_ENUM::RESET, STRING_ENUM::CANCEL };
+	}
+	i = 0;
+	for (auto e : v) {
+		b2 = m_modalButton[i++] = gtk_button_new_with_label(
+				getLanguageString(e));
+		addClass(b2, "sbutton");
+		g_signal_connect(b2, "clicked", G_CALLBACK(grid_gialog_button_clicked),
+				GP(e));
+		gtk_container_add(GTK_CONTAINER(b1), b2);
+	}
+	for (; i < SIZEI(m_modalButton); i++) {
+		m_modalButton[i] = NULL; //uses for gridDialogButtonClicked
+	}
+
+	gtk_container_add(GTK_CONTAINER(b), b1);
+	auto ca = gtk_dialog_get_content_area(GTK_DIALOG(d));
+	gtk_container_add(GTK_CONTAINER(ca), b);
+
+	gtk_widget_show_all(d);
+	auto r = gtk_dialog_run(GTK_DIALOG(d));
+	gtk_widget_destroy(d);
+	return r;
+}
+
+void GraphWindow::gridDialogButtonClicked(STRING_ENUM e) {
+	//printl(int(e))
+	if (e == STRING_ENUM::RESET) {
+		m_grid.reset();
+		m_grid.toDialog();
+		gtk_widget_set_sensitive(m_modalButton[0], 1);
+	} else {
+		if (e == STRING_ENUM::OK && m_modalButton[1]) {
+			m_grid.fromDialog();
+			redraw();
+		}
+		gtk_dialog_response(GTK_DIALOG(m_modal),
+				e == STRING_ENUM::OK ? GTK_RESPONSE_OK : GTK_RESPONSE_CANCEL);
+	}
 }

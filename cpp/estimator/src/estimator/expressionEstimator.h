@@ -1,10 +1,3 @@
-/******************************************************
- Copyright (c/c++) 2013-doomsday by Aleksey Slovesnov 
- homepage http://slovesnov.users.sourceforge.net/?parser
- email slovesnov@yandex.ru
- All rights reserved.
- ******************************************************/
-
 #ifndef _expressionEstimator_h_
 #define _expressionEstimator_h_
 
@@ -64,7 +57,7 @@ class ExpressionEstimator {
 
 public:
 	//version for calculator/graph
-	static constexpr double version = 1.26; //format("%.2lf",)
+	static constexpr double version = 1.28; //format("%.2lf",)
 
 #ifdef EXPRESSION_ESTIMATOR_COUNT_NODES
 	static int totalCreated;

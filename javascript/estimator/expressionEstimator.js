@@ -1,10 +1,3 @@
-/******************************************************
-Copyright (c/c++) 2013-doomsday by Alexey Slovesnov
-homepage http://slovesnov.users.sourceforge.net?parser
-email slovesnov@yandex.ru
-All rights reserved.
-******************************************************/
-
 // "use strict";
 class ExpressionEstimator {
 	/* 	m_expression;
@@ -16,7 +9,7 @@ class ExpressionEstimator {
 		m_root;
 	 */
 	#isLetter() {
-		return /[a-z]/i.test(this.m_expression[this.m_position]);
+		return /[A-Z]/.test(this.m_expression[this.m_position]);
 	}
 
 	#isDigit() {
@@ -70,7 +63,7 @@ class ExpressionEstimator {
 			);
 			token = this.m_expression.substring(i, this.m_position);
 
-			if (/^x\d+$/i.test(token)) {
+			if (token[0] == 'X' && token.length > 1 && /\d/.test(token[1])) {
 				j = parseInt(token.substring(1));
 				if (this.m_arguments < j + 1) {
 					this.m_arguments = j + 1;
@@ -134,19 +127,13 @@ class ExpressionEstimator {
 					}
 				}
 			} else {
-				c = 0;
-				for (i = this.m_position++; this.m_position < this.m_expression.length && (this.#isDigitOrPoint() || this.m_expression[this.m_position] == 'E'
-					|| this.m_expression[this.m_position - 1] == 'E' && ["+", "-"].includes(this.m_expression[this.m_position])); this.m_position++) {
-					if (this.#isPoint()) {
-						if (++c > 1) {
-							break;
-						}
-					}
-				}
-				if (c > 1) {
+				c = /^(\d+\.?\d*|\.\d+)(E[+-]?\d+)?/.exec(this.m_expression.substring(this.m_position))
+				if (c === null) {
 					throw new Error("invalid number");
 				}
-				this.m_tokenValue = parseFloat(this.m_expression.substring(i, this.m_position));
+				c = c[0];
+				this.m_tokenValue = parseFloat(c);
+				this.m_position += c.length;
 			}
 		} else {
 			throw new Error("unknown symbol ".this.m_expression[this.m_position]);
@@ -155,7 +142,7 @@ class ExpressionEstimator {
 
 	#parse(n = 0) {
 		let node
-		const a = [[OPERATOR_ENUM.PLUS, OPERATOR_ENUM.MINUS], 0
+		const a = [[OPERATOR_ENUM.PLUS, OPERATOR_ENUM.MINUS], []
 			, [OPERATOR_ENUM.MULTIPLY, OPERATOR_ENUM.DIVIDE], [OPERATOR_ENUM.POW]]
 		if (n == 1) {
 			if (this.m_operator == OPERATOR_ENUM.MINUS) {
@@ -175,6 +162,9 @@ class ExpressionEstimator {
 		while (a[n].includes(this.m_operator)) {
 			node = new Node(this, this.m_operator, node);
 			this.#getToken();
+			if (a[0].includes(this.m_operator)) {//here a[0]
+				throw new Error("two operators in a row");
+			}
 			node.m_right = this.#parse(n + 1);
 		}
 		return node;
@@ -245,9 +235,6 @@ class ExpressionEstimator {
 	compile(expression, ...variables) {
 		variables = Array.isArray(variables[0]) ? variables[0] : variables;
 		let v = variables, t, m;
-		if (/[+-]{2}/.test(expression)) {
-			throw new Error("two operators in a row");
-		}
 		let s = expression.replace(/\s+/g, "").replace(/\*{2}/g, "^");
 		if (s.includes(ExpressionEstimator.R)) {
 			throw new Error(ExpressionEstimator.R + " found in string");
@@ -258,7 +245,7 @@ class ExpressionEstimator {
 				t = e.toUpperCase();
 				if (ExpressionEstimator.CONSTANT_NAME.includes(t) || ExpressionEstimator.FUNCTION.includes(t)) {
 					throw new Error(
-						"reserved word \"t\" is used as variable"
+						`reserved word \"${t}\" is used as variable`
 					);
 				}
 				//also check empty

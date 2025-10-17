@@ -1,11 +1,3 @@
-/******************************************************
- Copyright (c/c++) 2013-doomsday by Aleksey Slovesnov
- homepage http://slovesnov.users.sourceforge.net/?calculator
- email slovesnov@yandex.ru
- All rights reserved.
- file created 3 jul 2014
- ******************************************************/
-
 #ifndef CALCULATORWINDOW_H_
 #define CALCULATORWINDOW_H_
 
@@ -95,7 +87,7 @@ class CalculatorWindow {
 
 	const gchar* getLanguageString(STRING_ENUM e) {
 		return g_locale_to_utf8(languageString[m_language][e].c_str(), -1, NULL,
-				NULL, NULL);
+		NULL, NULL);
 	}
 
 	void addItemToTable(GtkWidget *table, GtkWidget *w, int row, int column);

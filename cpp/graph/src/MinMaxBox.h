@@ -1,13 +1,3 @@
-/*
- * MinMaxBox.h
- *
- *  Created on: 13.04.2022
- *      Author: alexey slovesnov
- * copyright(c/c++): 2014-doomsday
- *           E-mail: slovesnov@yandex.ru
- *         homepage: slovesnov.users.sourceforge.net
- */
-
 #ifndef MINMAXBOX_H_
 #define MINMAXBOX_H_
 
@@ -34,7 +24,7 @@ public:
 	void set(std::string const &s1, std::string const &s2);
 	void setSize(int size);
 	double toScreen(double v);
-	double fromScreen(int v);
+	double fromScreen(double v);
 	void scale(double k);
 	void updateEntries();
 	void inputChanged(bool redraw = true);

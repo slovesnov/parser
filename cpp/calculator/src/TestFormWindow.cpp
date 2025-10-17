@@ -1,13 +1,3 @@
-/*
- * TestFormWindow.cpp
- *
- *  Created on: 16.04.2022
- *      Author: alexey slovesnov
- * copyright(c/c++): 2014-doomsday
- *           E-mail: slovesnov@yandex.ru
- *         homepage: slovesnov.users.sourceforge.net
- */
-
 #include <regex>
 
 #include "TestFormWindow.h"
@@ -54,7 +44,7 @@ TestFormWindow::TestFormWindow() {
 
 	box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
 	gtk_box_pack_start(GTK_BOX(box), gtk_label_new(caption[0].c_str()), FALSE,
-			FALSE, 0);
+	FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box), m_entry[0], TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box), m_label[0], FALSE, FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(mbox), box);

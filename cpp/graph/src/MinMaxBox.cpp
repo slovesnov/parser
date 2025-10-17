@@ -1,13 +1,3 @@
-/*
- * MinMaxBox.cpp
- *
- *  Created on: 13.04.2022
- *      Author: alexey slovesnov
- * copyright(c/c++): 2014-doomsday
- *           E-mail: slovesnov@yandex.ru
- *         homepage: slovesnov.users.sourceforge.net
- */
-
 #include "MinMaxBox.h"
 #include "GraphWindow.h"
 
@@ -90,7 +80,7 @@ double MinMaxBox::toScreen(double v) {
 	return (m_invert ? m_max - v : v - m_min) / (m_max - m_min) * m_size;
 }
 
-double MinMaxBox::fromScreen(int v) {
+double MinMaxBox::fromScreen(double v) {
 	auto a = v * (m_max - m_min) / m_size;
 	return (m_invert ? m_max - a : a + m_min);
 }
@@ -193,7 +183,7 @@ std::string MinMaxBox::toString() {
 		if (i) {
 			s += ' ';
 		}
-		s += Graph::toSaveString(gtk_entry_get_text(GTK_ENTRY(a)));
+		s += GraphWindow::toSaveString(gtk_entry_get_text(GTK_ENTRY(a)));
 		i++;
 	}
 	return s;

@@ -50,7 +50,7 @@ class Result
 	public function __toString()
 	{
 		if ($this->errorCode == ErrorCode::OK) {
-			return $this->value;
+			return (string)$this->value;
 		} else {
 			return array_search($this->errorCode, self::map);
 		}

@@ -38,20 +38,64 @@ class ExpressionEstimator
 	}
 
 	private const CONSTANT_NAME = [
-		"PI", "E", "SQRT2", "SQRT1_2", "LN2",
-		"LN10", "LOG2E", "LOG10E"
+		"PI",
+		"E",
+		"SQRT2",
+		"SQRT1_2",
+		"LN2",
+		"LN10",
+		"LOG2E",
+		"LOG10E"
 	];
 	private const CONSTANT_VALUE = [
-		M_PI, M_E, M_SQRT2, M_SQRT1_2, M_LN2, M_LN10,
-		M_LOG2E, M_LOG10E
+		M_PI,
+		M_E,
+		M_SQRT2,
+		M_SQRT1_2,
+		M_LN2,
+		M_LN10,
+		M_LOG2E,
+		M_LOG10E
 	];
 
 	private const FUNCTION = [
-		"POW", "ATAN2", "MIN", "MAX", "SIN", "COS",
-		"TAN", "COT", "SEC", "CSC", "ASIN", "ACOS", "ATAN", "ACOT", "ASEC",
-		"ACSC", "SINH", "COSH", "TANH", "COTH", "SECH", "CSCH", "ASINH",
-		"ACOSH", "ATANH", "ACOTH", "ASECH", "ACSCH", "RANDOM", "CEIL", "FLOOR",
-		"ROUND", "ABS", "SIGN", "EXP", "LOG", "SQRT"
+		"POW",
+		"ATAN2",
+		"MIN",
+		"MAX",
+		"SIN",
+		"COS",
+		"TAN",
+		"COT",
+		"SEC",
+		"CSC",
+		"ASIN",
+		"ACOS",
+		"ATAN",
+		"ACOT",
+		"ASEC",
+		"ACSC",
+		"SINH",
+		"COSH",
+		"TANH",
+		"COTH",
+		"SECH",
+		"CSCH",
+		"ASINH",
+		"ACOSH",
+		"ATANH",
+		"ACOTH",
+		"ASECH",
+		"ACSCH",
+		"RANDOM",
+		"CEIL",
+		"FLOOR",
+		"ROUND",
+		"ABS",
+		"SIGN",
+		"EXP",
+		"LOG",
+		"SQRT"
 	];
 
 	private const T = "+-*/()[]{},^";
@@ -72,7 +116,7 @@ class ExpressionEstimator
 			);
 			$token =  substr($this->m_expression, $i, $this->m_position - $i);
 
-			if (preg_match("~^x\d+$~i",$token)) {
+			if ($token[0] == 'X' && strlen($token) > 1 && ctype_digit($token[1])) {
 				$j = (int)substr($token, 1);
 				if ($this->m_arguments < $j + 1) {
 					$this->m_arguments = $j + 1;
@@ -135,20 +179,12 @@ class ExpressionEstimator
 					}
 				}
 			} else {
-				$c = 0;
-				for ($i = $this->m_position++; $this->m_position < strlen($this->m_expression) && ($this->isDigitOrPoint() || $this->m_expression[$this->m_position] == 'E'
-					|| $this->m_expression[$this->m_position - 1] == 'E' && in_array($this->m_expression[$this->m_position], ["+", "-"])); $this->m_position++) {
-					if ($this->isPoint()) {
-						if (++$c > 1) {
-							break;
-						}
-					}
-				}
-				if ($c > 1) {
+				if (!preg_match("/^(\\d+\\.?\\d*|\\.\\d+)(E[+-]?\\d+)?/", substr($this->m_expression, $this->m_position), $c)) {
 					throw new Error("invalid number");
 				}
-
-				$this->m_tokenValue = (float)substr($this->m_expression, $i, $this->m_position - $i);
+				$i = $c[0];
+				$this->m_tokenValue = (float)$i;
+				$this->m_position += strlen($i);
 			}
 		} else {
 			throw new Error("unknown symbol " . $this->m_expression[$this->m_position]);
@@ -156,7 +192,10 @@ class ExpressionEstimator
 	}
 
 	private const A = [
-		[OPERATOR_ENUM::PLUS, OPERATOR_ENUM::MINUS], 0, [OPERATOR_ENUM::MULTIPLY, OPERATOR_ENUM::DIVIDE], [OPERATOR_ENUM::POW]
+		[OPERATOR_ENUM::PLUS, OPERATOR_ENUM::MINUS],
+		0,
+		[OPERATOR_ENUM::MULTIPLY, OPERATOR_ENUM::DIVIDE],
+		[OPERATOR_ENUM::POW]
 	];
 
 	private function parse($n = 0)
@@ -179,6 +218,9 @@ class ExpressionEstimator
 		while (in_array($this->m_operator, self::A[$n])) {
 			$node = new Node($this, $this->m_operator, $node);
 			$this->getToken();
+			if (in_array($this->m_operator, self::A[0])) { //here A[0]
+				throw new Error("two operators in a row");
+			}
 			$node->m_right = $this->parse($n + 1);
 		}
 		return $node;
@@ -257,9 +299,6 @@ class ExpressionEstimator
 	{
 		$variables = self::modifyArguments($variables);
 		$v = $variables;
-		if (preg_match("~[+-]{2}~", $expression)) {
-			throw new Error("two operators in a row");
-		}
 		$s = preg_replace("/\\s+/", "", $expression);
 		$s = preg_replace("/\\*{2}/", "^", $s);
 		if (strpos($s, self::R) !== false) {

@@ -1,10 +1,3 @@
-/******************************************************
-Copyright (c/c++) 2013-doomsday by Aleksey Slovesnov 
-homepage http://slovesnov.users.sourceforge.net/?parser
-email slovesnov@yandex.ru
-All rights reserved.
-******************************************************/
-
 package calculator;
 
 import java.awt.BorderLayout;
@@ -96,7 +89,7 @@ public class CalculatorPanel extends JPanel implements ActionListener, Language 
 	private JButton aboutButton = new JButton(Helper.createImageIcon("help.png"));
 	private Color backgroundColor;
 	public static final Color defaultBackgroundColor = UIManager.getColor("Panel.background");
-	public static final String HOMEPAGE = "http://sccalculator.sourceforge.net/";
+	public static final String HOMEPAGE = "https://slovesnov.rf.gd/?calculator";
 
 	/*
 	 * 

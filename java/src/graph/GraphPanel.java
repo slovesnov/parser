@@ -1,10 +1,3 @@
-/******************************************************
-Copyright (c/c++) 2013-doomsday by Aleksey Slovesnov 
-homepage http://slovesnov.users.sourceforge.net/?parser
-email slovesnov@yandex.ru
-All rights reserved.
-******************************************************/
-
 package graph;
 
 import java.awt.BorderLayout;
@@ -61,7 +54,7 @@ public class GraphPanel extends JPanel implements ActionListener, Language {
 
 	public static final Color defaultBackgroundColor = UIManager.getColor("Panel.background");
 	private Color backgroundColor;
-	private static final String HOMEPAGE = "http://javadiagram.sourceforge.net";
+	private static final String HOMEPAGE = "https://slovesnov.rf.gd/?graph";
 	int language;
 	private String config = "javaGraph.cfg";
 

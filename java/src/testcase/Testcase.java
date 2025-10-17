@@ -2,12 +2,11 @@ package testcase;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.io.IOException;
 
 public class Testcase {
-
-	public static void main(String[] args) throws IOException, Exception {
-		String fn = "testcases.txt";
+	
+	public static void main(String[] args) throws Exception {
+		String fn = "testcases.txt";//
 		BufferedReader br = new BufferedReader(new FileReader(fn));
 		String s;
 		String q[] = new String[3];
