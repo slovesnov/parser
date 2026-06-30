@@ -13,7 +13,7 @@ class ExpressionEstimator {
 	}
 
 	#isDigit() {
-		return /\d/i.test(this.m_expression[this.m_position]);
+		return /\d/.test(this.m_expression[this.m_position]);
 	}
 
 	#isPoint() {
@@ -171,7 +171,7 @@ class ExpressionEstimator {
 	}
 
 	#parse4() {
-		let args, node;
+		let args, node, open;
 		if (this.m_operator >= OPERATOR_ENUM.POW && this.m_operator <= OPERATOR_ENUM.SQRT) {
 			if (this.m_operator <= OPERATOR_ENUM.MAX) {
 				args = 2;
