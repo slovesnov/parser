@@ -1,6 +1,0 @@
-1.27
-minmax_x=-0.3337 1000.3337
-minmax_y=0 15
-grid show_x=1 step_x=150 pixels_x=1 digits_x=2 show_y=1 step_y=150 pixels_y=1 digits_y=2 maxsteps=30
-type=0 color=0 formula=#0 200 5#200 1000 x/40 show=1
-type=0 color=1 formula=x/80+3 show=1
